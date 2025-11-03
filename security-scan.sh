@@ -18,6 +18,8 @@ NC='\033[0m' # No Color
 # Configuration
 REPORTS_DIR="./reports"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+OUTPUT_LOG_ENABLED=false
+OUTPUT_LOG_FILE="output.txt"
 
 ###############################################################################
 # Fonctions utilitaires
@@ -183,6 +185,15 @@ show_menu() {
     echo -e "${BLUE}Target:${NC} ${TARGET_URL:-Non défini}"
     echo -e "${BLUE}Image:${NC}  ${DOCKER_IMAGE:-Non définie}"
     echo ""
+    
+    # Afficher l'état de l'enregistrement des logs
+    if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+        echo -e "${BLUE}Enregistrement logs:${NC} ${GREEN}✓ Activé${NC} (fichier: $OUTPUT_LOG_FILE)"
+    else
+        echo -e "${BLUE}Enregistrement logs:${NC} ${YELLOW}✗ Désactivé${NC}"
+    fi
+    echo ""
+    
     echo "Choisissez le type de scan :"
     echo ""
     echo -e "${GREEN}1)${NC} Scan Rapide (Quick)      - ~15-30 min"
@@ -209,6 +220,8 @@ show_menu() {
     echo -e "${GREEN}8)${NC} Vérifier Configuration"
     echo ""
     echo -e "${GREEN}9)${NC} Nettoyer les rapports"
+    echo ""
+    echo -e "${CYAN}L)${NC} Basculer enregistrement logs (actuellement: $([ "$OUTPUT_LOG_ENABLED" = true ] && echo "activé" || echo "désactivé"))"
     echo ""
     echo -e "${RED}0)${NC} Quitter"
     echo ""
@@ -664,16 +677,32 @@ main() {
             1)
                 print_header "🚀 Lancement du Scan Rapide (Quick)"
                 print_info "Durée estimée: 15-30 minutes"
-                prepare_environment
-                run_sast
-                run_sca
-                run_container_scan
-                run_secrets_scan
-                run_dast
-                run_tls_headers
-                run_api_tests
-                generate_report
-                cleanup
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_sast
+                        run_sca
+                        run_container_scan
+                        run_secrets_scan
+                        run_dast
+                        run_tls_headers
+                        run_api_tests
+                        generate_report
+                        cleanup
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_sast
+                    run_sca
+                    run_container_scan
+                    run_secrets_scan
+                    run_dast
+                    run_tls_headers
+                    run_api_tests
+                    generate_report
+                    cleanup
+                fi
                 print_success "✅ Scan rapide terminé!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
@@ -681,58 +710,116 @@ main() {
             2)
                 print_header "🚀 Lancement du Scan Complet (Full)"
                 print_warning "Durée estimée: 2-4 heures"
-                prepare_environment
-                run_sast
-                run_sca
-                run_container_scan
-                run_secrets_scan
-                run_dast
-                run_tls_headers
-                run_network_scan
-                run_api_tests
-                generate_report
-                cleanup
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_sast
+                        run_sca
+                        run_container_scan
+                        run_secrets_scan
+                        run_dast
+                        run_tls_headers
+                        run_network_scan
+                        run_api_tests
+                        generate_report
+                        cleanup
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_sast
+                    run_sca
+                    run_container_scan
+                    run_secrets_scan
+                    run_dast
+                    run_tls_headers
+                    run_network_scan
+                    run_api_tests
+                    generate_report
+                    cleanup
+                fi
                 print_success "✅ Scan complet terminé!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
                 ;;
             3)
                 print_header "🧠 Lancement Analyse du Code Source"
-                prepare_environment
-                run_sast
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_sast
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_sast
+                fi
                 print_success "✅ Analyse du code source terminée!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
                 ;;
             4)
                 print_header "📦 Lancement Analyse des Dépendances"
-                prepare_environment
-                run_sca
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_sca
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_sca
+                fi
                 print_success "✅ Analyse des dépendances terminée!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
                 ;;
             5)
                 print_header "🌐 Lancement Tests Dynamiques Web"
-                prepare_environment
-                run_dast
-                run_tls_headers
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_dast
+                        run_tls_headers
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_dast
+                    run_tls_headers
+                fi
                 print_success "✅ Tests dynamiques web terminés!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
                 ;;
             6)
                 print_header "🐳 Lancement Scan Conteneurs Docker"
-                prepare_environment
-                run_container_scan
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_container_scan
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_container_scan
+                fi
                 print_success "✅ Scan conteneurs Docker terminé!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
                 ;;
             7)
-                print_header "� Lancement Détection Secrets"
-                prepare_environment
-                run_secrets_scan
+                print_header "🔑 Lancement Détection Secrets"
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    print_info "Logs enregistrés dans: $OUTPUT_LOG_FILE"
+                    {
+                        prepare_environment
+                        run_secrets_scan
+                    } 2>&1 | tee -a "$OUTPUT_LOG_FILE"
+                else
+                    prepare_environment
+                    run_secrets_scan
+                fi
                 print_success "✅ Détection secrets terminée!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
@@ -749,6 +836,16 @@ main() {
                 print_success "✅ Nettoyage complet terminé!"
                 echo ""
                 read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            [Ll])
+                if [ "$OUTPUT_LOG_ENABLED" = true ]; then
+                    OUTPUT_LOG_ENABLED=false
+                    print_info "Enregistrement des logs désactivé"
+                else
+                    OUTPUT_LOG_ENABLED=true
+                    print_success "Enregistrement des logs activé → $OUTPUT_LOG_FILE"
+                fi
+                sleep 2
                 ;;
             0)
                 print_info "Au revoir!"
