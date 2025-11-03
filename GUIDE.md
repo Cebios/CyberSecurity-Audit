@@ -56,12 +56,10 @@ docker login docker.cebios-lms.fr
 docker compose run --rm gitleaks              # Détection de secrets
 docker compose run --rm dependency_check      # Vulnérabilités dépendances
 docker compose run --rm semgrep               # Analyse SAST
+docker compose run --rm phpstan               # Analyse statique PHP
+docker compose run --rm php_cs_fixer          # Standards de code PHP
 docker compose run --rm zap_baseline          # Scan web dynamique
 docker compose run --rm trivy                 # Vulnérabilités conteneurs
-
-# Outils déjà intégrés au projet
-cd elearning && ./app.sh code-quality-check   # PHPStan + PHP-CS-Fixer
-cd elearning && ./test-coverage.sh            # PHPUnit + Couverture
 ```
 
 ---
@@ -74,14 +72,16 @@ cd elearning && ./test-coverage.sh            # PHPUnit + Couverture
 - Détecte : Injections SQL, XSS, CSRF, failles OWASP Top 10
 - Rapport : `reports/semgrep/semgrep-report.json`
 
-**PHPStan & PHP-CS-Fixer** *(déjà intégrés dans le projet)*
-- Lancez via : `cd elearning && ./app.sh code-quality-check`
-- PHPStan : Analyse statique PHP niveau 9
-- PHP-CS-Fixer : Vérification standards PSR
+**PHPStan**
+- Détecte : Erreurs de typage, bugs logiques, code mort, mauvaises pratiques PHP
+- Niveau : Analyse stricte avec configuration sécurité
+- Rapport : `reports/phpstan/phpstan-report.json`
+- Lancez via : `docker compose run --rm phpstan`
 
-**PHPUnit** *(déjà intégré dans le projet)*
-- Lancez via : `cd elearning && ./test-coverage.sh`
-- Tests unitaires avec couverture de code
+**PHP-CS-Fixer**
+- Détecte : Non-conformité aux standards PSR, problèmes de style et qualité de code
+- Rapport : `reports/php-cs-fixer/php-cs-fixer-report.json`
+- Lancez via : `docker compose run --rm php_cs_fixer`
 
 ### 📦 SCA - Analyse des Dépendances
 
@@ -187,6 +187,9 @@ nano .env
 # Répertoire du projet à scanner (relatif au dossier de sécurité)
 PROJECT_DIR=./elearning
 
+# Chemin vers le Dockerfile (relatif au PROJECT_DIR)
+DOCKERFILE_PATH=docker/php
+
 # Snyk (optionnel mais recommandé)
 SNYK_TOKEN=votre-token
 
@@ -244,6 +247,9 @@ nano .env
 # Chemin relatif vers votre projet (depuis ce dossier)
 PROJECT_DIR=./mon-projet
 
+# Chemin vers le Dockerfile (relatif au projet)
+DOCKERFILE_PATH=docker/php
+
 # URL de votre application
 TARGET_URL=https://mon-app.example.com
 
@@ -297,6 +303,7 @@ PROJECT_DIR=./mon-projet
 
 ```properties
 PROJECT_DIR=../laravel-app
+DOCKERFILE_PATH=docker/app
 TARGET_URL=https://staging.myapp.aws.com
 DOCKER_IMAGE=123456789.dkr.ecr.eu-west-1.amazonaws.com/laravel-app:staging
 SNYK_TOKEN=abc123...
@@ -308,6 +315,7 @@ OSSINDEX_TOKEN=xyz789...
 
 ```properties
 PROJECT_DIR=./symfony-api
+DOCKERFILE_PATH=docker/php-fpm
 TARGET_URL=https://api.example.ovh
 DOCKER_IMAGE=docker.example.fr/api:latest
 SNYK_TOKEN=def456...
@@ -319,6 +327,7 @@ OSSINDEX_TOKEN=tuv012...
 
 ```properties
 PROJECT_DIR=../wordpress
+DOCKERFILE_PATH=Dockerfile
 TARGET_URL=http://localhost:8080
 DOCKER_IMAGE=wordpress:latest
 ```
@@ -347,6 +356,7 @@ snyk:
 
 - [ ] Copier `.env.example` vers `.env`
 - [ ] Définir `PROJECT_DIR` (chemin vers le projet)
+- [ ] Définir `DOCKERFILE_PATH` (chemin relatif vers Dockerfile)
 - [ ] Définir `TARGET_URL` (URL de l'application)
 - [ ] Définir `DOCKER_IMAGE` (image à scanner)
 - [ ] Configurer `SNYK_TOKEN` (optionnel)
@@ -569,8 +579,8 @@ cat reports/gitleaks/gitleaks-report.json
 ```bash
 # Avant chaque commit
 docker compose run --rm gitleaks              # Vérifier secrets
-cd elearning && ./app.sh code-quality-check   # PHPStan + PHP-CS-Fixer
-cd elearning && ./test-coverage.sh            # Tests unitaires
+docker compose run --rm phpstan               # Analyse statique PHP
+docker compose run --rm php_cs_fixer          # Standards de code
 ```
 
 ### 👨‍💼 Tech Lead (Hebdomadaire)
@@ -694,6 +704,8 @@ rm -rf reports/
 ```
 reports/
 ├── semgrep/              # Analyse code source
+├── phpstan/              # Analyse statique PHP
+├── php-cs-fixer/         # Standards de code PHP
 ├── dependency-check/     # Vulnérabilités dépendances
 ├── gitleaks/             # Secrets détectés ⚠️
 ├── trivy/                # Vulnérabilités conteneurs

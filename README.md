@@ -26,9 +26,9 @@ nano .env  # Définir PROJECT_DIR, TARGET_URL, DOCKER_IMAGE
 - 📊 Interprétation des résultats
 - 🚨 Actions d'urgence et résolution de problèmes
 
-## 🛠️ Outils Inclus (15)
+## 🛠️ Outils Inclus (17)
 
-**SAST** : Semgrep (+ PHPStan, PHP-CS-Fixer dans projet)  
+**SAST** : Semgrep, PHPStan, PHP-CS-Fixer  
 **SCA** : OWASP Dependency Check, Snyk, Security Checker  
 **Conteneurs** : Trivy, Grype, Hadolint  
 **Secrets** : GitLeaks, TruffleHog  
@@ -41,6 +41,7 @@ nano .env  # Définir PROJECT_DIR, TARGET_URL, DOCKER_IMAGE
 
 ```properties
 PROJECT_DIR=./elearning                          # Chemin vers projet
+DOCKERFILE_PATH=docker/php                       # Chemin Dockerfile (relatif au projet)
 TARGET_URL=https://dev.cebios-lms.fr             # URL à scanner
 DOCKER_IMAGE=docker.cebios-lms.fr/app-lms:latest # Image Docker
 SNYK_TOKEN=...                                    # Token Snyk (optionnel)
