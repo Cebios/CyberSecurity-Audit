@@ -71,7 +71,8 @@ if [ -f "$REPORTS_DIR/semgrep/semgrep-report.json" ]; then
     echo -e "    Critical: ${RED}$critical${NC}"
     
     if [ "$findings" -gt 0 ]; then
-        echo -e "    Fichier: ${BLUE}$REPORTS_DIR/semgrep/semgrep-report.json${NC}"
+        echo -e "    Rapport lisible: ${BLUE}$REPORTS_DIR/semgrep/semgrep-report.txt${NC}"
+        echo -e "    Rapport JSON: ${BLUE}$REPORTS_DIR/semgrep/semgrep-report.json${NC}"
     fi
 else
     echo -e "  ${YELLOW}⚠ Semgrep: Pas de rapport${NC}"
@@ -364,4 +365,62 @@ echo -e "  ${BLUE}open reports/zap/zap-baseline-report.html${NC}"
 echo -e "  ${BLUE}open reports/dependency-check/dependency-check-report.html${NC}"
 echo -e "  ${BLUE}open reports/testssl/testssl-report.html${NC}"
 
+echo -e "\n${CYAN}📋 Liste complète de tous les rapports disponibles:${NC}"
+
+# Fonction pour lister les rapports par catégorie
+list_reports() {
+    local category=$1
+    local tool_dir=$2
+    local description=$3
+    
+    echo -e "\n  ${YELLOW}$category${NC} ($description):"
+    
+    if [ -d "$REPORTS_DIR/$tool_dir" ]; then
+        found_reports=$(find "$REPORTS_DIR/$tool_dir" -name "*.json" -o -name "*.html" -o -name "*.md" | sort)
+        if [ -n "$found_reports" ]; then
+            echo "$found_reports" | while read -r report; do
+                relative_path=${report#"$REPORTS_DIR/"}
+                echo -e "    ${BLUE}$relative_path${NC}"
+            done
+        else
+            echo -e "    ${YELLOW}Aucun rapport trouvé${NC}"
+        fi
+    else
+        echo -e "    ${YELLOW}Dossier $tool_dir non trouvé${NC}"
+    fi
+}
+
+# Lister tous les rapports par outil
+list_reports "🧠 Semgrep" "semgrep" "Analyse Statique"
+list_reports "🧠 PHPStan" "phpstan" "Analyse Statique"
+list_reports "🧠 PHP-CS-Fixer" "php-cs-fixer" "Style & Formatage"
+list_reports "📦 Dependency Check" "dependency-check" "Analyse Dépendances"
+list_reports "📦 Snyk" "snyk" "Analyse Dépendances"
+list_reports "🔑 GitLeaks" "gitleaks" "Détection Secrets"
+list_reports "🔑 TruffleHog" "trufflehog" "Détection Secrets"
+list_reports "🐳 Trivy" "trivy" "Sécurité Conteneurs"
+list_reports "🐳 Grype" "grype" "Sécurité Conteneurs"
+list_reports "🐳 Hadolint" "hadolint" "Linting Docker"
+list_reports "🌐 OWASP ZAP" "zap" "Tests Dynamiques"
+list_reports "🌐 Nuclei" "nuclei" "Templates Sécurité"
+list_reports "🔐 TestSSL" "testssl" "Configuration TLS"
+list_reports "🛡️ SecurityHeaders" "securityheaders" "En-têtes HTTP"
+list_reports "🧪 Newman" "newman" "Tests API"
+
+# Lister les rapports globaux (Markdown)
+echo -e "\n  ${YELLOW}📝 Rapports Markdown${NC} (Résumés Sécurité):"
+if [ -d "$REPORTS_DIR" ]; then
+    md_reports=$(find "$REPORTS_DIR" -maxdepth 1 -name "*.md" | sort)
+    if [ -n "$md_reports" ]; then
+        echo "$md_reports" | while read -r report; do
+            filename=$(basename "$report")
+            echo -e "    ${BLUE}$filename${NC}"
+        done
+    else
+        echo -e "    ${YELLOW}Aucun rapport trouvé${NC}"
+    fi
+fi
+
 echo ""
+
+

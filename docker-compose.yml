@@ -8,12 +8,14 @@ services:
     image: returntocorp/semgrep:latest
     container_name: semgrep_scan
     command: >
-      semgrep scan 
-      --config=p/owasp-top-ten 
-      --config=p/security-audit 
-      --config=p/php 
-      --json 
-      --output=/reports/semgrep-report.json
+      semgrep scan
+      --config=p/owasp-top-ten
+      --config=p/security-audit
+      --config=p/php
+      --json
+      --json-output=/reports/semgrep-report.json
+      --text
+      --text-output=/reports/semgrep-report.txt
       --metrics=off
       /src
     volumes:
