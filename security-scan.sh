@@ -439,7 +439,7 @@ run_tls_headers() {
     
     # TestSSL
     print_info "Lancement de TestSSL..."
-    rm reports/testssl/testssl-report.json
+    rm -f reports/testssl/testssl-report.json reports/testssl/testssl-report.html
     if docker compose run --rm testssl; then
         print_success "TestSSL terminé"
     else
