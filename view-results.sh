@@ -284,7 +284,7 @@ if [ -f "$REPORTS_DIR/newman/newman-report.json" ]; then
     
     if [ "$failed_tests" -gt 0 ]; then
         echo -e "    ${RED}⚠️  ATTENTION: $failed_tests tests de sécurité API ont échoué${NC}"
-        echo -e "    Voir: ${BLUE}$REPORTS_DIR/newman/newman-report.html${NC}"
+        echo -e "    Voir: ${BLUE}$REPORTS_DIR/newman/newman-report.json${NC}"
     else
         echo -e "    ${GREEN}✓ Tous les tests API ont réussi${NC}"
     fi
@@ -363,6 +363,5 @@ echo -e "\n${CYAN}Pour ouvrir les rapports HTML:${NC}"
 echo -e "  ${BLUE}open reports/zap/zap-baseline-report.html${NC}"
 echo -e "  ${BLUE}open reports/dependency-check/dependency-check-report.html${NC}"
 echo -e "  ${BLUE}open reports/testssl/testssl-report.html${NC}"
-echo -e "  ${BLUE}open reports/newman/newman-report.html${NC}"
 
 echo ""
