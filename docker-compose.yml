@@ -1,0 +1,335 @@
+services:
+  ########################################################################
+  # 🧠 1. Analyse statique du code (SAST)
+  ########################################################################
+  
+  # Semgrep - Analyse SAST avec règles OWASP
+  semgrep:
+    image: returntocorp/semgrep:latest
+    container_name: semgrep_scan
+    command: >
+      semgrep scan 
+      --config=p/owasp-top-ten 
+      --config=p/security-audit 
+      --config=p/php 
+      --json 
+      --output=/reports/semgrep-report.json
+      --metrics=off
+      /src
+    volumes:
+      - ${PROJECT_DIR:-./elearning}:/src
+      - ./reports/semgrep:/reports
+    working_dir: /src
+    restart: "no"
+
+  # PHPStan - Analyse statique PHP (niveau max)
+  phpstan:
+    image: ghcr.io/phpstan/phpstan:latest
+    container_name: phpstan_scan
+    entrypoint: sh
+    command: -c "phpstan analyse --configuration=/config/phpstan-security.neon --error-format=json --no-progress --memory-limit=1G --no-interaction 2>&1 | tee /reports/phpstan-report.json || true"
+    volumes:
+      - ${PROJECT_DIR}:/app
+      - ./reports/phpstan:/reports
+      - ./phpstan-security.neon:/config/phpstan-security.neon:ro
+    working_dir: /app
+    restart: "no"
+
+  # PHP-CS-Fixer - Vérification standards de code PHP
+  php_cs_fixer:
+    image: oskarstark/php-cs-fixer-ga:latest
+    container_name: php_cs_fixer_scan
+    entrypoint: sh
+    command: -c "php-cs-fixer fix /app/src --dry-run --format=json 2>&1 | grep -E '^\\{|^\\[' > /reports/php-cs-fixer-report.json || echo '{\"files\":[]}' > /reports/php-cs-fixer-report.json"
+    volumes:
+      - ${PROJECT_DIR}:/app
+      - ./reports/php-cs-fixer:/reports
+    working_dir: /app
+    restart: "no"
+
+  ########################################################################
+  # 📦 2. Analyse des dépendances (SCA)
+  ########################################################################
+  
+  # OWASP Dependency Check
+  dependency_check:
+    image: owasp/dependency-check:latest
+    container_name: dependency_check
+    environment:
+      - OSSINDEX_USER=${OSSINDEX_USER:-}
+      - OSSINDEX_TOKEN=${OSSINDEX_TOKEN:-}
+    volumes:
+      - ${PROJECT_DIR}:/src
+      - ./reports/dependency-check:/report
+      - ./dependency-check-suppressions.xml:/suppressions/dependency-check-suppressions.xml:ro
+      - dependency-check-data:/usr/share/dependency-check/data
+    command: >
+      --scan /src 
+      --format ALL 
+      --out /report
+      --enableExperimental
+      --suppression /suppressions/dependency-check-suppressions.xml
+    restart: "no"
+
+  # Snyk - Analyse des vulnérabilités (alternative/complément)
+  snyk:
+    image: snyk/snyk:php
+    container_name: snyk_scan
+    entrypoint: sh
+    environment:
+      - SNYK_TOKEN=${SNYK_TOKEN:-}
+    volumes:
+      - ${PROJECT_DIR}:/project
+      - ./reports/snyk:/reports
+    command: -c "snyk test --json > /reports/snyk-report.json 2>&1 || true"
+    working_dir: /project
+    restart: "no"
+
+  # Local PHP Security Checker
+  local_php_security:
+    image: composer:latest
+    container_name: local_php_security
+    command: >
+      sh -c "composer global require enlightn/security-checker && 
+      /tmp/vendor/bin/security-checker security:check /app/composer.lock --format=json > /reports/security-checker.json || true"
+    volumes:
+      - ${PROJECT_DIR}:/app
+      - ./reports/security-checker:/reports
+    working_dir: /app
+    restart: "no"
+
+  ########################################################################
+  # 🐳 3. Scan des images Docker (conteneurs)
+  ########################################################################
+  
+  # Trivy - Scanner de vulnérabilités
+  trivy:
+    image: aquasec/trivy:latest
+    container_name: trivy_scan
+    command: >
+      image 
+      --format json 
+      --output /reports/trivy-report.json
+      --severity HIGH,CRITICAL
+      ${DOCKER_IMAGE}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./reports/trivy:/reports
+      - trivy-cache:/root/.cache/
+      - ${HOME}/.docker/config.json:/root/.docker/config.json:ro
+    restart: "no"
+    env_file:
+      - .env
+
+  # Grype - Alternative à Trivy (parfois plus à jour)
+  grype:
+    image: anchore/grype:latest
+    container_name: grype_scan
+    command: >
+      ${DOCKER_IMAGE}
+      -o json 
+      --file /reports/grype-report.json
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./reports/grype:/reports
+      - grype-cache:/root/.cache/
+      - ${HOME}/.docker/config.json:/root/.docker/config.json:ro
+    restart: "no"
+    env_file:
+      - .env
+
+  # Hadolint - Vérification Dockerfile
+  hadolint:
+    image: hadolint/hadolint:latest
+    container_name: hadolint_scan
+    command: hadolint --format json /dockerfile/Dockerfile > /reports/hadolint-report.json || true
+    volumes:
+      - ${PROJECT_DIR}/${DOCKERFILE}:/dockerfile
+      - ./reports/hadolint:/reports
+    restart: "no"
+
+  ########################################################################
+  # 🔑 4. Détection de secrets et credentials
+  ########################################################################
+  
+  # GitLeaks - Détection de secrets dans le code
+  gitleaks:
+    image: zricethezav/gitleaks:latest
+    container_name: gitleaks_scan
+    command: >
+      detect 
+      --source=/src 
+      --report-format=json 
+      --report-path=/reports/gitleaks-report.json 
+      --verbose
+      --no-git
+    volumes:
+      - ${PROJECT_DIR}:/src
+      - ./reports/gitleaks:/reports
+    restart: "no"
+
+  # TruffleHog - Détection de secrets (alternative)
+  trufflehog:
+    image: trufflesecurity/trufflehog:latest
+    container_name: trufflehog_scan
+    command: >
+      filesystem /src 
+      --json 
+      > /reports/trufflehog-report.json || true
+    volumes:
+      - ${PROJECT_DIR}:/src
+      - ./reports/trufflehog:/reports
+    restart: "no"
+
+  ########################################################################
+  # 🌐 5. Scan applicatif web (DAST)
+  ########################################################################
+  
+  # OWASP ZAP Baseline - Mode OVH-friendly (ralenti, évite blocages)
+  # ⚠️  Pensez à whitelister votre IP dans OVH avant de lancer !
+  zap_baseline:
+    image: ghcr.io/zaproxy/zaproxy:stable
+    container_name: zap_baseline
+    command: >
+      zap-baseline.py 
+      -t ${TARGET_URL} 
+      -J zap-baseline-report.json
+      -r zap-baseline-report.html
+      -w zap-baseline-report.md
+      -z "-config connection.timeoutInSecs=60"
+      -z "-config scanner.threadPerHost=2"
+    volumes:
+      - ./reports/zap:/zap/wrk
+    restart: "no"
+
+  # ZAP Full Scan - ⚠️  IP WHITELISTÉE OBLIGATOIRE !
+  zap_full:
+    image: ghcr.io/zaproxy:stable
+    container_name: zap_full
+    command: >
+      zap-full-scan.py 
+      -t ${TARGET_URL} 
+      -J zap-full-report.json
+      -r zap-full-report.html
+      -z "-config connection.timeoutInSecs=90"
+      -z "-config scanner.threadPerHost=1"
+    volumes:
+      - ./reports/zap:/zap/wrk
+    restart: "no"
+    profiles: ["full"]
+
+  # Nuclei - Mode rate-limited pour OVH
+  nuclei:
+    image: projectdiscovery/nuclei:latest
+    container_name: nuclei_scan
+    command: >
+      -u ${TARGET_URL} 
+      -json-export /reports/nuclei-report.json
+      -severity critical,high,medium
+      -rate-limit 5
+      -timeout 45
+      -retries 1
+      -tags cve,exposure
+    volumes:
+      - ./reports/nuclei:/reports
+      - nuclei-templates:/root/nuclei-templates
+    restart: "no"
+
+  ########################################################################
+  # 🔐 6. Tests TLS/HTTPS & En-têtes HTTP
+  ########################################################################
+  
+  # TestSSL - Test SSL/TLS
+  testssl:
+    image: drwetter/testssl.sh:latest
+    container_name: testssl_scan
+    command: >
+      --jsonfile /reports/testssl-report.json
+      --htmlfile /reports/testssl-report.html
+      ${TARGET_URL}
+    volumes:
+      - ./reports/testssl:/reports
+    restart: "no"
+
+  # SecurityHeaders - Vérification en-têtes HTTP
+  securityheaders:
+    image: metascan/securityheaders:latest
+    container_name: securityheaders_scan
+    command: ${TARGET_URL}
+    volumes:
+      - ./reports/securityheaders:/reports
+    restart: "no"
+
+  ########################################################################
+  # 🌍 7. Scan réseau et infrastructure
+  ########################################################################
+  
+  # Nmap - Scan réseau
+  nmap:
+    image: instrumentisto/nmap:latest
+    container_name: nmap_scan
+    command: >
+      -sV -sC -O --script vuln 
+      -oX /reports/nmap-report.xml
+      dev.cebios-lms.fr
+    volumes:
+      - ./reports/nmap:/reports
+    restart: "no"
+
+  ########################################################################
+  # 🧾 8. Tests API / Authentification
+  ########################################################################
+  
+  # Newman - Tests Postman
+  newman:
+    image: postman/newman:latest
+    container_name: newman_api_scan
+    volumes:
+      - ./tests:/etc/newman
+      - ./reports/newman:/reports
+    command: >
+      run /etc/newman/api_collection.json 
+      --reporters cli,json,html
+      --reporter-json-export /reports/newman-report.json
+      --reporter-html-export /reports/newman-report.html
+    restart: "no"
+
+  ########################################################################
+  # 📊 9. Agrégateur de rapports
+  ########################################################################
+  
+  # DefectDojo (optionnel - à lancer séparément)
+  defectdojo:
+    image: defectdojo/defectdojo-django:latest
+    container_name: defectdojo
+    environment:
+      - DD_DATABASE_URL=postgresql://defectdojo:defectdojo@postgres:5432/defectdojo
+      - DD_SECRET_KEY=${DD_SECRET_KEY:-change-me-in-production}
+    ports:
+      - "8080:8080"
+    volumes:
+      - defectdojo-media:/app/media
+    depends_on:
+      - postgres
+    restart: "no"
+    profiles: ["reporting"]
+
+  postgres:
+    image: postgres:15-alpine
+    container_name: defectdojo_postgres
+    environment:
+      - POSTGRES_DB=defectdojo
+      - POSTGRES_USER=defectdojo
+      - POSTGRES_PASSWORD=defectdojo
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    restart: "no"
+    profiles: ["reporting"]
+
+volumes:
+  dependency-check-data:
+  trivy-cache:
+  grype-cache:
+  nuclei-templates:
+  defectdojo-media:
+  postgres-data:

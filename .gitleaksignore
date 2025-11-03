@@ -1,0 +1,36 @@
+version: "3"
+
+extends: default
+
+rules:
+  # Ignorer les fichiers de test et vendors
+  paths:
+    - path: vendor/
+      type: allowlist
+    - path: tests/fixtures/
+      type: allowlist
+    - path: var/cache/
+      type: allowlist
+    - path: public/build/
+      type: allowlist
+  
+  # Règles personnalisées
+  rules:
+    # Ignorer les tokens de test
+    - id: generic-api-key
+      paths:
+        - tests/**
+    
+    # Ignorer les secrets dans la documentation
+    - id: generic-api-key
+      paths:
+        - Documentation/**
+        - README.md
+
+# Ajouter des patterns personnalisés à ignorer
+allowlist:
+  description: "Ignore test credentials and documentation examples"
+  regexes:
+    - "password.*=.*test"
+    - "api_key.*=.*example"
+    - "secret.*=.*dummy"

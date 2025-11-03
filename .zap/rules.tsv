@@ -1,0 +1,58 @@
+# ZAP Configuration Rules
+# Format: ALERT_ID	THRESHOLD	[IGNORE URL REGEX]
+#
+# THRESHOLDS:
+#   OFF     - Désactiver complètement
+#   IGNORE  - Ignorer (ne pas déclencher d'alerte)
+#   INFO    - Informatif seulement
+#   LOW     - Basse priorité
+#   MEDIUM  - Priorité moyenne (par défaut)
+#   HIGH    - Haute priorité
+#
+# Exemples:
+# 10021	IGNORE	https://dev.cebios-lms.fr/api/.*
+# 10038	OFF
+# 10094	HIGH
+#
+# Liste des règles: https://www.zaproxy.org/docs/alerts/
+
+# =============================================================================
+# RÈGLES PERSONNALISÉES
+# =============================================================================
+
+# Désactiver pour les endpoints d'API REST (réduire faux positifs)
+# 10021	IGNORE	https://dev.cebios-lms.fr/api/.*
+
+# Ignorer les alertes sur les assets statiques
+# 10049	IGNORE	https://dev.cebios-lms.fr/build/.*
+# 10049	IGNORE	https://dev.cebios-lms.fr/images/.*
+
+# =============================================================================
+# RÈGLES DE BASE (Exemples commentés)
+# =============================================================================
+
+# X-Frame-Options Header Not Set (10020)
+# 10020	MEDIUM
+
+# X-Content-Type-Options Header Missing (10021)
+# 10021	MEDIUM
+
+# Content Security Policy (CSP) Header Not Set (10038)
+# 10038	MEDIUM
+
+# Cookie Without Secure Flag (10011)
+# 10011	MEDIUM
+
+# Cookie Without HttpOnly Flag (10010)
+# 10010	MEDIUM
+
+# Cookie Without SameSite Attribute (10054)
+# 10054	LOW
+
+# =============================================================================
+# FAUX POSITIFS CONNUS (À personnaliser)
+# =============================================================================
+
+# Si vous avez des faux positifs récurrents, ajoutez-les ici
+# Exemple: Ignorer "SQL Injection" sur une page de test
+# 40018	IGNORE	https://dev.cebios-lms.fr/test/.*

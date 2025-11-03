@@ -1,0 +1,6 @@
+parameters:
+    level: max
+    paths:
+        - /app/src
+    ignoreErrors:
+        - '#Unsafe usage of new static#'

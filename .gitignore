@@ -1,0 +1,46 @@
+# =============================================================================
+# .gitignore pour les outils de sécurité
+# =============================================================================
+
+# Rapports de sécurité (peuvent contenir des informations sensibles)
+reports/
+*.sarif
+
+# Variables d'environnement (contiennent des tokens)
+.env
+.env.local
+.env.*.local
+
+# Cache des outils
+.trivy/
+.grype/
+.nuclei/
+
+# Rapports temporaires
+security-report-*.md
+security-report-*.html
+security-report-*.json
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Rapports DefectDojo
+defectdojo-media/
+
+# Backup files
+*.bak
+*~
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Données sensibles potentielles
+secrets.txt
+credentials.txt
+passwords.txt

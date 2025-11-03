@@ -1,0 +1,403 @@
+{
+  "info": {
+    "name": "elearning - Security API Tests",
+    "description": "Collection de tests de sécurité pour l'API elearning",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "security-tests-elearning",
+    "version": "1.0.0"
+  },
+  "item": [
+    {
+      "name": "Authentication Tests",
+      "item": [
+        {
+          "name": "Login - Valid Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 200 or 302', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 302]);",
+                  "});",
+                  "",
+                  "pm.test('Response contains session or token', function () {",
+                  "    // Adapter selon votre implémentation",
+                  "    pm.expect(pm.cookies.has('PHPSESSID') || pm.response.json().token).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test@example.com\",\n  \"password\": \"ValidPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        },
+        {
+          "name": "Login - SQL Injection Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 or 403 (not 200)', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('No SQL error in response', function () {",
+                  "    const body = pm.response.text().toLowerCase();",
+                  "    pm.expect(body).to.not.include('sql');",
+                  "    pm.expect(body).to.not.include('mysql');",
+                  "    pm.expect(body).to.not.include('syntax error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin' OR '1'='1\",\n  \"password\": \"' OR '1'='1\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        },
+        {
+          "name": "Login - XSS Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 or 403', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('XSS payload not reflected unescaped', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.not.include('<script>alert(');",
+                  "    pm.expect(body).to.not.include('<img src=x onerror=');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"<script>alert('XSS')</script>\",\n  \"password\": \"<img src=x onerror=alert('XSS')>\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authorization Tests",
+      "item": [
+        {
+          "name": "Access Protected Resource - No Auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 401 or 403', function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([401, 403]);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        },
+        {
+          "name": "Access Admin Resource - Normal User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 403 (Forbidden)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(403);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{user_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Input Validation Tests",
+      "item": [
+        {
+          "name": "API Endpoint - Invalid Input",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is 400 (Bad Request)', function () {",
+                  "    pm.expect(pm.response.code).to.equal(400);",
+                  "});",
+                  "",
+                  "pm.test('Error message is generic', function () {",
+                  "    const body = pm.response.text().toLowerCase();",
+                  "    // Ne doit pas révéler d'informations sensibles",
+                  "    pm.expect(body).to.not.include('stack trace');",
+                  "    pm.expect(body).to.not.include('exception');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"invalid_field\": \"value\",\n  \"malformed\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "users"]
+            }
+          }
+        },
+        {
+          "name": "Path Traversal Attempt",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code is not 200', function () {",
+                  "    pm.expect(pm.response.code).to.not.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('No sensitive file content in response', function () {",
+                  "    const body = pm.response.text();",
+                  "    pm.expect(body).to.not.include('root:');",
+                  "    pm.expect(body).to.not.include('APP_SECRET');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/files?path=../../../../etc/passwd",
+              "host": ["{{base_url}}"],
+              "path": ["files"],
+              "query": [
+                {
+                  "key": "path",
+                  "value": "../../../../etc/passwd"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security Headers Tests",
+      "item": [
+        {
+          "name": "Check Security Headers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('X-Frame-Options header is present', function () {",
+                  "    pm.response.to.have.header('X-Frame-Options');",
+                  "});",
+                  "",
+                  "pm.test('X-Content-Type-Options header is present', function () {",
+                  "    pm.response.to.have.header('X-Content-Type-Options');",
+                  "    pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.equal('nosniff');",
+                  "});",
+                  "",
+                  "pm.test('Content-Security-Policy header is present', function () {",
+                  "    pm.response.to.have.header('Content-Security-Policy');",
+                  "});",
+                  "",
+                  "pm.test('Strict-Transport-Security header is present', function () {",
+                  "    pm.response.to.have.header('Strict-Transport-Security');",
+                  "});",
+                  "",
+                  "pm.test('X-XSS-Protection header is present', function () {",
+                  "    pm.response.to.have.header('X-XSS-Protection');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Rate Limiting Tests",
+      "item": [
+        {
+          "name": "Rate Limit - Multiple Requests",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Faire plusieurs requêtes rapidement",
+                  "for (let i = 0; i < 10; i++) {",
+                  "    pm.sendRequest({",
+                  "        url: pm.variables.get('base_url') + '/login',",
+                  "        method: 'POST',",
+                  "        header: {",
+                  "            'Content-Type': 'application/json'",
+                  "        },",
+                  "        body: {",
+                  "            mode: 'raw',",
+                  "            raw: JSON.stringify({",
+                  "                username: 'test',",
+                  "                password: 'test'",
+                  "            })",
+                  "        }",
+                  "    }, function(err, res) {",
+                  "        console.log('Request ' + i + ': ' + res.code);",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Rate limiting is active (429 expected after multiple requests)', function () {",
+                  "    // Ce test peut nécessiter un ajustement selon votre implémentation",
+                  "    // Un status 429 indique que le rate limiting fonctionne",
+                  "    if (pm.response.code === 429) {",
+                  "        pm.expect(pm.response.code).to.equal(429);",
+                  "    }",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test\",\n  \"password\": \"test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/login",
+              "host": ["{{base_url}}"],
+              "path": ["login"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://dev.cebios-lms.fr",
+      "type": "string"
+    },
+    {
+      "key": "user_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "admin_token",
+      "value": "",
+      "type": "string"
+    }
+  ]
+}

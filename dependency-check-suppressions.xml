@@ -1,0 +1,149 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<suppressions xmlns="https://jeremylong.github.io/DependencyCheck/dependency-suppression.1.3.xsd">
+    
+    <!-- 
+    =============================================================================
+    Fichier de suppression pour OWASP Dependency Check
+    =============================================================================
+    
+    Ce fichier permet de gérer les faux positifs détectés par Dependency Check.
+    
+    Usage:
+    1. Identifier le CVE dans le rapport dependency-check
+    2. Vérifier que la vulnérabilité ne s'applique pas réellement à votre cas
+    3. Ajouter une suppression avec une justification détaillée
+    4. Relancer le scan
+    
+    ⚠️ ATTENTION : Ne supprimez pas les vulnérabilités réelles !
+    =============================================================================
+    -->
+    
+    <!-- 
+    =============================================================================
+    EXEMPLE DE SUPPRESSIONS
+    =============================================================================
+    -->
+    
+    <!-- 
+    Exemple 1: Supprimer un CVE spécifique pour une dépendance
+    -->
+    <!--
+    <suppress>
+        <notes><![CDATA[
+        CVE-2023-XXXXX : Faux positif
+        Raison: Cette vulnérabilité affecte uniquement la version X.Y.Z
+        et nous utilisons la version A.B.C qui n'est pas affectée.
+        Validé par: [Votre Nom]
+        Date: 2025-10-31
+        ]]></notes>
+        <packageUrl regex="true">^pkg:maven/org\.example/vulnerable-lib@.*$</packageUrl>
+        <cve>CVE-2023-XXXXX</cve>
+    </suppress>
+    -->
+    
+    <!-- 
+    Exemple 2: Supprimer tous les CVE pour un package spécifique
+    (À utiliser avec EXTRÊME prudence)
+    -->
+    <!--
+    <suppress>
+        <notes><![CDATA[
+        Package de test uniquement, jamais utilisé en production
+        ]]></notes>
+        <packageUrl regex="true">^pkg:composer/test-package/.*$</packageUrl>
+    </suppress>
+    -->
+    
+    <!-- 
+    Exemple 3: Supprimer par nom de fichier
+    -->
+    <!--
+    <suppress>
+        <notes><![CDATA[
+        Fichier de développement uniquement
+        ]]></notes>
+        <filePath regex="true">.*vendor/dev-package/.*\.php</filePath>
+    </suppress>
+    -->
+    
+    <!-- 
+    Exemple 4: Supprimer un CVE avec une date d'expiration
+    -->
+    <!--
+    <suppress until="2025-12-31">
+        <notes><![CDATA[
+        Suppression temporaire en attendant le correctif officiel
+        Ticket: SECU-123
+        ]]></notes>
+        <packageUrl regex="true">^pkg:composer/symfony/http-kernel@.*$</packageUrl>
+        <cve>CVE-2023-XXXXX</cve>
+    </suppress>
+    -->
+    
+    <!-- 
+    =============================================================================
+    VOS SUPPRESSIONS PERSONNALISÉES
+    =============================================================================
+    Ajoutez vos suppressions ci-dessous avec une justification détaillée
+    -->
+    
+    <!-- 
+    Suppression pour les dépendances de développement (exemple)
+    Ces packages ne sont pas déployés en production
+    -->
+    <suppress>
+        <notes><![CDATA[
+        Dépendances de développement uniquement (PHPUnit, PHPStan, etc.)
+        Ces packages ne sont jamais inclus dans le build de production
+        ]]></notes>
+        <filePath regex="true">.*vendor/phpunit/.*</filePath>
+    </suppress>
+    
+    <suppress>
+        <notes><![CDATA[
+        PHPStan - Outil de développement uniquement
+        ]]></notes>
+        <filePath regex="true">.*vendor/phpstan/.*</filePath>
+    </suppress>
+    
+    <suppress>
+        <notes><![CDATA[
+        PHP-CS-Fixer - Outil de développement uniquement
+        ]]></notes>
+        <filePath regex="true">.*vendor/friendsofphp/php-cs-fixer/.*</filePath>
+    </suppress>
+    
+    <!-- 
+    =============================================================================
+    NOTES IMPORTANTES
+    =============================================================================
+    
+    1. DOCUMENTATION OBLIGATOIRE
+       - Toujours documenter pourquoi vous supprimez une vulnérabilité
+       - Inclure la date et la personne qui a validé la suppression
+       - Référencer un ticket si applicable
+    
+    2. REVUE RÉGULIÈRE
+       - Revoir les suppressions tous les 3 mois
+       - Supprimer les suppressions obsolètes
+       - Utiliser "until" pour les suppressions temporaires
+    
+    3. VALIDATION
+       - Faire valider les suppressions par l'équipe sécurité
+       - Documenter dans le wiki/confluence
+       - Inclure dans les code reviews
+    
+    4. TYPES DE SUPPRESSIONS
+       - Par CVE spécifique (recommandé)
+       - Par package (avec prudence)
+       - Par chemin de fichier (pour dev dependencies)
+    
+    5. REGEX
+       - Utiliser regex="true" pour les patterns
+       - Tester vos regex avant de les ajouter
+       - Privilégier les patterns précis aux patterns larges
+    
+    =============================================================================
+    -->
+    
+</suppressions>
