@@ -7,10 +7,10 @@ Suite complète d'analyse de sécurité automatisée, configurable pour plusieur
 ```bash
 # 1. Configuration
 cp .env.example .env
-nano .env  # Définir PROJECT_DIR, TARGET_URL, DOCKER_IMAGE
+nano .env  # Définir PROJECT_DIR, DOCKERFILE_PATH, TARGET_URL, DOCKER_IMAGE
 
-# 2. Scanner
-./security-scan.sh quick    # 30 min
+# 2. Lancer le menu interactif
+./security-scan.sh
 
 # 3. Résultats
 ./view-results.sh

@@ -2,7 +2,7 @@
 
 ###############################################################################
 # 🔐 Script d'analyse de sécurité complète
-# Usage: ./security-scan.sh [quick|full|report]
+# Usage: ./security-scan.sh
 ###############################################################################
 
 set -e
@@ -12,12 +12,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 # Configuration
 REPORTS_DIR="./reports"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
-SCAN_MODE="${1:-quick}"
 
 ###############################################################################
 # Fonctions utilitaires
@@ -43,6 +43,176 @@ print_warning() {
 
 print_info() {
     echo -e "${BLUE}ℹ $1${NC}"
+}
+
+###############################################################################
+# Vérification de la configuration
+###############################################################################
+
+check_configuration() {
+    print_header "🔍 Vérification de la Configuration"
+    
+    local has_error=0
+    
+    # Charger les variables d'environnement
+    if [ ! -f .env ]; then
+        print_error "Fichier .env non trouvé"
+        print_info "Copiez .env.example vers .env et configurez les valeurs"
+        exit 1
+    fi
+    
+    export $(grep -v '^#' .env | xargs 2>/dev/null || true)
+    print_success "Fichier .env chargé"
+    
+    # Vérifier PROJECT_DIR
+    if [ -z "$PROJECT_DIR" ]; then
+        print_error "PROJECT_DIR non défini dans .env"
+        has_error=1
+    elif [ ! -d "$PROJECT_DIR" ]; then
+        print_error "Répertoire PROJECT_DIR introuvable: $PROJECT_DIR"
+        has_error=1
+    else
+        print_success "Répertoire projet trouvé: $PROJECT_DIR"
+    fi
+    
+    # Vérifier DOCKERFILE
+    if [ -n "$DOCKERFILE" ]; then
+        local dockerfile_path="$PROJECT_DIR/$DOCKERFILE"
+        if [ ! -f "$dockerfile_path" ]; then
+            print_warning "Dockerfile introuvable: $dockerfile_path"
+            print_info "Le scan Hadolint sera ignoré"
+        else
+            print_success "Dockerfile trouvé: $dockerfile_path"
+        fi
+    else
+        print_warning "DOCKERFILE non défini dans .env"
+        print_info "Le scan Hadolint sera ignoré"
+    fi
+    
+    # Vérifier TARGET_URL
+    if [ -z "$TARGET_URL" ]; then
+        print_warning "TARGET_URL non défini dans .env"
+        print_info "Les scans DAST seront ignorés"
+    else
+        print_info "Test de connectivité vers $TARGET_URL..."
+        local domain=$(echo "$TARGET_URL" | sed -E 's|^https?://||' | sed 's|/.*||')
+        if ping -c 1 -W 2 "$domain" &>/dev/null || curl -s --head --max-time 5 "$TARGET_URL" &>/dev/null; then
+            print_success "Target URL accessible: $TARGET_URL"
+        else
+            print_warning "Target URL non accessible: $TARGET_URL"
+            print_info "Les scans DAST pourraient échouer"
+        fi
+    fi
+    
+    # Vérifier DOCKER_IMAGE
+    if [ -z "$DOCKER_IMAGE" ]; then
+        print_warning "DOCKER_IMAGE non défini dans .env"
+        print_info "Les scans d'images Docker seront ignorés"
+    else
+        print_info "Vérification de l'image Docker: $DOCKER_IMAGE"
+        
+        # Extraire registry, image et tag
+        local registry=""
+        local image_name="$DOCKER_IMAGE"
+        
+        if [[ "$DOCKER_IMAGE" == *"/"*"/"* ]]; then
+            registry=$(echo "$DOCKER_IMAGE" | cut -d'/' -f1)
+            image_name=$(echo "$DOCKER_IMAGE" | cut -d'/' -f2-)
+        fi
+        
+        # Vérifier si l'image existe localement
+        if docker image inspect "$DOCKER_IMAGE" &>/dev/null; then
+            print_success "Image Docker trouvée localement: $DOCKER_IMAGE"
+        else
+            print_warning "Image Docker non trouvée localement: $DOCKER_IMAGE"
+            
+            # Vérifier si on peut se connecter au registry
+            if [ -n "$registry" ]; then
+                print_info "Tentative de connexion au registry: $registry"
+                if docker login "$registry" --username=test --password=test &>/dev/null 2>&1; then
+                    print_warning "Registry accessible mais credentials requis: $registry"
+                    print_info "Lancez: docker login $registry"
+                else
+                    print_info "Assurez-vous d'être connecté au registry: docker login $registry"
+                fi
+            fi
+            
+            print_info "Les scans d'images Docker nécessiteront le téléchargement de l'image"
+        fi
+    fi
+    
+    # Vérifier Docker
+    if ! command -v docker &> /dev/null; then
+        print_error "Docker n'est pas installé"
+        has_error=1
+    else
+        print_success "Docker disponible ($(docker --version))"
+    fi
+    
+    # Vérifier docker compose
+    if ! docker compose version &> /dev/null; then
+        print_error "Docker Compose n'est pas disponible"
+        has_error=1
+    else
+        print_success "Docker Compose disponible"
+    fi
+    
+    if [ $has_error -eq 1 ]; then
+        print_error "Erreurs de configuration détectées. Corrigez-les avant de continuer."
+        exit 1
+    fi
+    
+    echo ""
+    print_success "Configuration validée ✓"
+    echo ""
+}
+
+###############################################################################
+# Menu interactif
+###############################################################################
+
+show_menu() {
+    clear
+    echo -e "${CYAN}"
+    echo "╔════════════════════════════════════════════════════════════╗"
+    echo "║       🔐 Suite d'Analyse de Sécurité Complète            ║"
+    echo "╚════════════════════════════════════════════════════════════╝"
+    echo -e "${NC}"
+    echo ""
+    echo -e "${BLUE}Projet:${NC} $PROJECT_DIR"
+    echo -e "${BLUE}Target:${NC} ${TARGET_URL:-Non défini}"
+    echo -e "${BLUE}Image:${NC}  ${DOCKER_IMAGE:-Non définie}"
+    echo ""
+    echo "Choisissez le type de scan :"
+    echo ""
+    echo -e "${GREEN}1)${NC} Scan Rapide (Quick)      - ~15-30 min"
+    echo "   Analyse code, dépendances, secrets, conteneurs, TLS/en-têtes"
+    echo ""
+    echo -e "${GREEN}2)${NC} Scan Complet (Full)      - ~2-4 heures"
+    echo "   Quick + Tests dynamiques web (ZAP Full) + Scan réseau (Nmap)"
+    echo ""
+    echo -e "${GREEN}3)${NC} Analyse du Code Source   - ~5-10 min"
+    echo "   Semgrep, PHPStan, PHP-CS-Fixer"
+    echo ""
+    echo -e "${GREEN}4)${NC} Analyse des Dépendances  - ~10-15 min"
+    echo "   Dependency Check, Snyk, Security Checker"
+    echo ""
+    echo -e "${GREEN}5)${NC} Tests Dynamiques Web     - ~30 min - 1h"
+    echo "   ZAP Baseline, Nuclei"
+    echo ""
+    echo -e "${GREEN}6)${NC} Scan Conteneurs Docker   - ~5-10 min"
+    echo "   Trivy, Grype, Hadolint"
+    echo ""
+    echo -e "${GREEN}7)${NC} Détection Secrets        - ~2-5 min"
+    echo "   GitLeaks, TruffleHog"
+    echo ""
+    echo -e "${GREEN}8)${NC} Vérifier Configuration"
+    echo ""
+    echo -e "${GREEN}9)${NC} Nettoyer les rapports"
+    echo ""
+    echo -e "${RED}0)${NC} Quitter"
+    echo ""
+    echo -n "Votre choix : "
 }
 
 ###############################################################################
@@ -256,6 +426,7 @@ run_tls_headers() {
     
     # TestSSL
     print_info "Lancement de TestSSL..."
+    rm reports/testssl/testssl-report.html
     if docker compose run --rm testssl; then
         print_success "TestSSL terminé"
     else
@@ -482,65 +653,113 @@ EOF
 ###############################################################################
 
 main() {
-    case "$SCAN_MODE" in
-        quick)
-            print_header "🚀 Lancement du Scan Rapide de Sécurité"
-            prepare_environment
-            run_sast
-            run_sca
-            run_secrets_scan
-            run_dast
-            run_tls_headers
-            run_api_tests
-            generate_report
-            cleanup
-            print_success "✅ Scan rapide terminé!"
-            ;;
-        full)
-            print_header "🚀 Lancement du Scan Complet de Sécurité"
-            print_warning "Ce scan peut prendre 2-4 heures"
-            prepare_environment
-            run_sast
-            run_sca
-            run_container_scan
-            run_secrets_scan
-            run_dast
-            run_tls_headers
-            run_network_scan
-            run_api_tests
-            generate_report
-            cleanup
-            print_success "✅ Scan complet terminé!"
-            ;;
-        report)
-            print_header "📊 Génération du Rapport"
-            generate_report
-            print_success "✅ Rapport généré!"
-            ;;
-        clean)
-            cleanup
-            print_info "Suppression des volumes..."
-            docker compose down -v
-            print_success "✅ Nettoyage complet terminé!"
-            ;;
-        help|--help|-h)
-            show_usage
-            exit 0
-            ;;
-        *)
-            print_error "Mode inconnu: $SCAN_MODE"
-            show_usage
-            exit 1
-            ;;
-    esac
+    # Vérifier la configuration au démarrage
+    check_configuration
     
-    print_header "📋 Résumé"
-    print_info "Rapports disponibles dans: $REPORTS_DIR"
-    print_info "Pour voir le rapport consolidé: cat $REPORTS_DIR/security-report-*.md"
-    
-    if [ "$SCAN_MODE" != "report" ]; then
-        print_info "\nPour générer un rapport actualisé: $0 report"
-    fi
+    while true; do
+        show_menu
+        read -r choice
+        
+        case $choice in
+            1)
+                print_header "🚀 Lancement du Scan Rapide (Quick)"
+                print_info "Durée estimée: 15-30 minutes"
+                prepare_environment
+                run_sast
+                run_sca
+                run_container_scan
+                run_secrets_scan
+                run_dast
+                run_tls_headers
+                run_api_tests
+                generate_report
+                cleanup
+                print_success "✅ Scan rapide terminé!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            2)
+                print_header "🚀 Lancement du Scan Complet (Full)"
+                print_warning "Durée estimée: 2-4 heures"
+                prepare_environment
+                run_sast
+                run_sca
+                run_container_scan
+                run_secrets_scan
+                run_dast
+                run_tls_headers
+                run_network_scan
+                run_api_tests
+                generate_report
+                cleanup
+                print_success "✅ Scan complet terminé!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            3)
+                print_header "🧠 Lancement Analyse du Code Source"
+                prepare_environment
+                run_sast
+                print_success "✅ Analyse du code source terminée!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            4)
+                print_header "📦 Lancement Analyse des Dépendances"
+                prepare_environment
+                run_sca
+                print_success "✅ Analyse des dépendances terminée!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            5)
+                print_header "🌐 Lancement Tests Dynamiques Web"
+                prepare_environment
+                run_dast
+                run_tls_headers
+                print_success "✅ Tests dynamiques web terminés!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            6)
+                print_header "🐳 Lancement Scan Conteneurs Docker"
+                prepare_environment
+                run_container_scan
+                print_success "✅ Scan conteneurs Docker terminé!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            7)
+                print_header "� Lancement Détection Secrets"
+                prepare_environment
+                run_secrets_scan
+                print_success "✅ Détection secrets terminée!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            8)
+                check_configuration
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            9)
+                cleanup
+                print_info "Suppression des volumes..."
+                docker compose down -v 2>/dev/null || true
+                print_success "✅ Nettoyage complet terminé!"
+                echo ""
+                read -p "Appuyez sur Entrée pour continuer..."
+                ;;
+            0)
+                print_info "Au revoir!"
+                exit 0
+                ;;
+            *)
+                print_error "Choix invalide"
+                sleep 2
+                ;;
+        esac
+    done
 }
 
 # Trap pour le nettoyage en cas d'interruption
@@ -548,3 +767,4 @@ trap cleanup INT TERM
 
 # Lancement
 main
+

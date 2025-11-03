@@ -27,13 +27,13 @@ docker --version
 
 # 2. Configurer les variables
 cp .env.example .env
-nano .env  # Remplir PROJECT_DIR, TARGET_URL, DOCKER_IMAGE
+nano .env  # Remplir PROJECT_DIR, DOCKERFILE_PATH, TARGET_URL, DOCKER_IMAGE
 
 # 3. Se connecter au registry (si nécessaire)
 docker login docker.cebios-lms.fr
 
-# 4. Lancer le scan (15-30 min)
-./security-scan.sh quick
+# 4. Lancer le menu interactif
+./security-scan.sh
 
 # 5. Voir les résultats
 ./view-results.sh
@@ -43,12 +43,32 @@ docker login docker.cebios-lms.fr
 
 ## 📋 Commandes Principales
 
-| Commande | Description | Durée |
-|----------|-------------|-------|
-| `./security-scan.sh quick` | Scan rapide complet | ~30 min |
-| `./security-scan.sh full` | Scan exhaustif + Nmap + ZAP Full | ~2-4h |
-| `./view-results.sh` | Résumé visuel des résultats | <1 min |
-| `./security-scan.sh clean` | Nettoyer conteneurs et volumes | <1 min |
+### Menu Interactif
+
+```bash
+./security-scan.sh
+```
+
+Le script affiche un **menu interactif** avec les options suivantes :
+
+| Option | Description | Durée |
+|--------|-------------|-------|
+| **1** | Scan Rapide (Quick) | ~15-30 min |
+| **2** | Scan Complet (Full) | ~2-4h |
+| **3** | Analyse du Code Source | ~5-10 min |
+| **4** | Analyse des Dépendances | ~10-15 min |
+| **5** | Tests Dynamiques Web | ~30 min - 1h |
+| **6** | Scan Conteneurs Docker | ~5-10 min |
+| **7** | Détection Secrets | ~2-5 min |
+| **8** | Vérifier Configuration | <1 min |
+| **9** | Nettoyer les rapports | <1 min |
+| **0** | Quitter | - |
+
+### Consulter les Résultats
+
+```bash
+./view-results.sh   # Résumé visuel de tous les rapports
+```
 
 ### Outils Individuels
 
@@ -86,8 +106,8 @@ docker compose run --rm trivy                 # Vulnérabilités conteneurs
 ### 📦 SCA - Analyse des Dépendances
 
 **OWASP Dependency Check**
-- Détecte : CVE dans composer.lock et dépendances
-- Base : National Vulnerability Database (NVD)
+- Détecte : Vulnérabilités connues dans composer.lock et toutes les dépendances du projet
+- Base : National Vulnerability Database (NVD) - base de données officielle des failles de sécurité
 - Rapport : `reports/dependency-check/dependency-check-report.html`
 - ⚙️ Config faux positifs : `elearning/dependency-check-suppressions.xml`
 
@@ -103,11 +123,11 @@ docker compose run --rm trivy                 # Vulnérabilités conteneurs
 ### 🐳 Sécurité des Conteneurs
 
 **Trivy**
-- Détecte : CVE dans les images Docker
+- Détecte : Failles de sécurité connues dans les images Docker
 - Rapport : `reports/trivy/trivy-report.json`
 
 **Grype**
-- Détecte : Vulnérabilités conteneurs (alternatif à Trivy)
+- Détecte : Vulnérabilités dans les conteneurs (alternatif à Trivy)
 - Rapport : `reports/grype/grype-report.json`
 
 **Hadolint**
@@ -139,7 +159,7 @@ docker compose run --rm trivy                 # Vulnérabilités conteneurs
 - ⚠️ **Whitelist IP obligatoire** + uniquement sur vos serveurs de test !
 
 **Nuclei**
-- Détecte : CVE connues, expositions, misconfigurations
+- Détecte : Failles de sécurité connues, services exposés, erreurs de configuration
 - Templates : Mis à jour automatiquement
 - Rapport : `reports/nuclei/nuclei-report.json`
 - ⚠️ Rate-limited pour éviter blocage OVH
@@ -148,11 +168,11 @@ docker compose run --rm trivy                 # Vulnérabilités conteneurs
 
 **TestSSL**
 - Vérifie : Protocoles SSL/TLS, chiffrement, certificats
-- Détecte : POODLE, Heartbleed, etc.
+- Détecte : Failles connues comme POODLE, Heartbleed, etc.
 - Rapport : `reports/testssl/testssl-report.html`
 
 **SecurityHeaders**
-- Vérifie : CSP, X-Frame-Options, HSTS, etc.
+- Vérifie : En-têtes de sécurité HTTP (CSP, X-Frame-Options, HSTS, etc.)
 - Rapport : `reports/securityheaders/`
 
 ### 🌍 Scan Réseau
@@ -182,26 +202,6 @@ cp .env.example .env
 nano .env
 ```
 
-**Variables importantes :**
-```properties
-# Répertoire du projet à scanner (relatif au dossier de sécurité)
-PROJECT_DIR=./elearning
-
-# Chemin vers le Dockerfile (relatif au PROJECT_DIR)
-DOCKERFILE_PATH=docker/php
-
-# Snyk (optionnel mais recommandé)
-SNYK_TOKEN=votre-token
-
-# OSS Index / Sonatype (REQUIS depuis 2024 pour Dependency Check)
-OSSINDEX_USER=votre-email@exemple.com
-OSSINDEX_TOKEN=votre-token-ossindex
-
-# Cibles de scan
-TARGET_URL=https://dev.cebios-lms.fr
-DOCKER_IMAGE=docker.cebios-lms.fr/app-lms:latest
-```
-
 ### 2. Registry Docker privé
 
 ```bash
@@ -222,9 +222,6 @@ Ce dossier de sécurité est conçu pour être **réutilisable sur plusieurs pro
 #### 1. Copier le dossier de sécurité
 
 ```bash
-# Copier tout le dossier (sans le projet elearning)
-cp -r /path/to/elearning_secu /path/to/mon-nouveau-projet_secu
-
 # Ou cloner depuis Git si vous l'avez versionnée
 git clone <repo-security-tools> mon-nouveau-projet_secu
 ```
@@ -380,20 +377,6 @@ Les outils DAST (ZAP, Nuclei) envoient beaucoup de requêtes rapidement, ce qui 
 
 #### Solution 1 : Whitelister votre IP (Recommandé)
 
-```bash
-# Récupérer votre IP publique
-./whitelist-ip.sh
-
-# Ou manuellement
-curl -s ifconfig.me
-```
-
-**Dans le WAF OVH :**
-1. Espace client OVH → Web Cloud → Hébergement
-2. Sélectionner votre domaine
-3. Sécurité → Firewall applicatif
-4. Ajouter votre IP en liste blanche
-
 **Dans Fail2ban (si serveur dédié/VPS) :**
 
 ```bash
@@ -432,26 +415,7 @@ Dans `.env` :
 TARGET_URL=https://test.cebios-lms.fr
 ```
 
-#### Solution 3 : Ralentir les scans
-
-Les configurations dans `docker-compose.yml` sont déjà optimisées pour OVH :
-
-```yaml
-# ZAP - Mode "poli"
-zap_baseline:
-  command: >
-    -z "-config connection.timeoutInSecs=60"  # Timeout plus long
-    -z "-config scanner.threadPerHost=2"      # Seulement 2 threads
-
-# Nuclei - Rate limiting
-nuclei:
-  command: >
-    -rate-limit 5        # Max 5 requêtes/seconde
-    -timeout 45          # Timeout 45s
-    -retries 1           # 1 seule tentative
-```
-
-#### Solution 4 : Scanner depuis le serveur lui-même
+#### Solution 3 : Scanner depuis le serveur lui-même
 
 ```bash
 # SSH sur le serveur
@@ -481,10 +445,6 @@ docker compose run --rm securityheaders
 **Étape 3 : Tests actifs APRÈS whitelist**
 
 ```bash
-# Whitelister votre IP d'abord
-./whitelist-ip.sh
-
-# Puis lancer ZAP et Nuclei
 docker compose run --rm zap_baseline
 docker compose run --rm nuclei
 ```
@@ -492,46 +452,14 @@ docker compose run --rm nuclei
 ### 🚨 Si vous êtes bloqué
 
 ```bash
-# 1. Changer d'IP (VPN, 4G, etc.)
-# Ou attendre 30 min - 1h
-
-# 2. Débloquer depuis le serveur
+# Débloquer depuis le serveur
 ssh user@dev.cebios-lms.fr
 sudo fail2ban-client unban VOTRE_IP
 
-# 3. Vérifier les logs
+# Vérifier les logs
 sudo tail -f /var/log/nginx/access.log | grep "VOTRE_IP"
 sudo fail2ban-client status nginx-limit-req
 ```
-
-### 💡 Bonnes Pratiques DAST
-
-**✅ À FAIRE**
-- Whitelister votre IP de bureau
-- Utiliser un sous-domaine de test
-- Scanner en heures creuses
-- Prévenir l'équipe ops avant scan
-- Commencer par mode passif
-- Utiliser rate-limiting
-
-**❌ À NE PAS FAIRE**
-- Scanner la prod sans autorisation
-- Lancer ZAP Full sans whitelist
-- Scanner sans prévenir
-- Utiliser threads/workers élevés
-- Ignorer les bannissements
-
-### 📝 Checklist Avant Scan DAST
-
-- [ ] IP whitelistée dans WAF OVH
-- [ ] Environnement de test utilisé
-- [ ] Rate limiting configuré
-- [ ] Équipe prévenue
-- [ ] Scan en heures creuses
-- [ ] Mode passif testé avant
-- [ ] Logs accessibles pour debug
-
----
 
 ## 📊 Interprétation des Résultats
 
@@ -539,18 +467,18 @@ sudo fail2ban-client status nginx-limit-req
 
 | Niveau | Délai | Action |
 |--------|-------|--------|
-| 🔴 **CRITICAL** | < 24h | Correction immédiate + rotation credentials |
-| 🟠 **HIGH** | < 1 semaine | Correction prioritaire |
-| 🟡 **MEDIUM** | < 1 mois | Planifier correction |
-| 🟢 **LOW** | Backlog | À traiter si temps |
+| 🔴 **CRITIQUE** | < 24h | Correction immédiate + rotation des identifiants |
+| 🟠 **ÉLEVÉ** | < 1 semaine | Correction prioritaire |
+| 🟡 **MOYEN** | < 1 mois | Planifier correction |
+| 🟢 **FAIBLE** | Backlog | À traiter si temps disponible |
 
 ### Ordre de priorité
 
-1. **🔑 Secrets détectés** → Rotation immédiate
+1. **🔑 Secrets détectés** → Rotation immédiate des identifiants
 2. **💉 Injections SQL/XSS** → Correction critique
-3. **📦 CVE critiques** → Mise à jour dépendances
-4. **🔐 SSL/TLS** → Améliorer configuration
-5. **📋 En-têtes HTTP** → Ajouter headers manquants
+3. **📦 Vulnérabilités critiques dans les dépendances** → Mise à jour des bibliothèques
+4. **🔐 SSL/TLS** → Améliorer configuration du chiffrement
+5. **📋 En-têtes HTTP** → Ajouter les en-têtes de sécurité manquants
 
 ### Consulter les rapports
 
@@ -572,33 +500,116 @@ cat reports/gitleaks/gitleaks-report.json
 
 ---
 
-## 🔄 Workflows par Rôle
+## 🔄 Workflows de Sécurité
 
-### 💻 Développeur (Quotidien)
+### 💻 A chaque commit (déjà intégré au workflow github actions)
 
 ```bash
-# Avant chaque commit
-docker compose run --rm gitleaks              # Vérifier secrets
-docker compose run --rm phpstan               # Analyse statique PHP
-docker compose run --rm php_cs_fixer          # Standards de code
+# 1. Vérifier qu'il n'y a pas de secrets dans votre code
+docker compose run --rm gitleaks
+
+# 2 Détecte les erreurs de code
+docker compose run --rm phpstan        
+# 3 Verifie les standards du code       
+docker compose run --rm php_cs_fixer          
+
+# Temps total : ~2-5 minutes
 ```
 
-### 👨‍💼 Tech Lead (Hebdomadaire)
+**Quand ?** Avant chaque `git commit` ou `git push`  
+**Pourquoi ?** Éviter de committer des mots de passe ou du code de mauvaise qualité
+
+---
+
+### � Scan rapide hebdomadaire (quick)
+
+Pour un **contrôle régulier** de la sécurité du projet :
 
 ```bash
 ./security-scan.sh quick
 ./view-results.sh
-# Traiter les problèmes critiques
 ```
 
-### 🔒 Security Team (Release)
+**Ce qui est scanné :**
+- ✅ Code source (injections SQL, XSS, failles OWASP)
+- ✅ Dépendances (vulnérabilités dans les bibliothèques)
+- ✅ Secrets exposés
+- ✅ Images Docker
+- ✅ Qualité du code PHP
+
+**Quand ?** Une fois par semaine, ou après avoir ajouté de nouvelles dépendances  
+**Durée :** ~15-30 minutes  
+**Pourquoi ?** Détecter rapidement les nouvelles vulnérabilités dans les bibliothèques ou les erreurs de code
+
+---
+
+### � Scan complet avant release (full)
+
+Pour une **validation complète** avant mise en production :
 
 ```bash
 ./security-scan.sh full
 ./view-results.sh
 cat reports/security-report-*.md
-# Valider avant mise en production
 ```
+
+**Ce qui est scanné en plus :**
+- ✅ Tout ce que fait le scan `quick`
+- ✅ Tests dynamiques web (OWASP ZAP Full - scan actif)
+- ✅ Scan réseau (Nmap - ports ouverts)
+- ✅ Tests API approfondis
+
+**Quand ?**
+- Avant de fusionner une grosse fonctionnalité
+- Avant une release majeure
+- Au moins une fois par mois
+
+**Durée :** ~2-4 heures  
+**Pourquoi ?** S'assurer qu'aucune faille critique n'existe avant de déployer en production
+
+---
+
+### 📋 Récapitulatif : Quand faire quoi ?
+
+| Situation | Action | Outils | Temps |
+|-----------|--------|--------|-------|
+| Avant chaque commit | Vérifications rapides | GitLeaks + PHPStan + PHP-CS-Fixer | 2-5 min |
+| Ajout de dépendances | Scan quick | Tous les outils SAST/SCA | 15-30 min |
+| Une fois par semaine | Scan quick | Tous les outils SAST/SCA | 15-30 min |
+| Avant mise en production | Scan full | Tous les outils + DAST + Nmap | 2-4h |
+| Grosse fonctionnalité | Scan full | Tous les outils + DAST + Nmap | 2-4h |
+
+---
+
+### 💡 Exemple de workflow pour un développeur
+
+**Lundi matin (début de sprint) :**
+```bash
+./security-scan.sh
+# Choisir l'option 1 (Scan Rapide)
+# Traiter les vulnérabilités détectées avant de commencer
+```
+
+**Pendant la semaine (développement) :**
+```bash
+# Avant chaque commit - via menu ou directement
+./security-scan.sh  # Option 7 (Secrets) puis Option 3 (Analyse Code Source)
+
+# Ou directement :
+docker compose run --rm gitleaks
+docker compose run --rm phpstan
+docker compose run --rm php_cs_fixer
+```
+
+**Vendredi (avant merge/release) :**
+```bash
+./security-scan.sh
+# Choisir l'option 2 (Scan Complet)
+./view-results.sh
+# Corriger les problèmes critiques avant de merger
+```
+
+
 
 ---
 
@@ -617,13 +628,13 @@ git log -S "secret_value" --all  # Trouver dans l'historique
 # 4. Vérifier logs serveur pour usage malveillant
 ```
 
-### Si CVE critiques
+### Si vulnérabilités critiques détectées
 
 ```bash
 # 1. Voir détails
 open reports/dependency-check/dependency-check-report.html
 
-# 2. Mettre à jour
+# 2. Mettre à jour les bibliothèques
 cd elearning && composer update
 
 # 3. Re-scanner
@@ -678,27 +689,6 @@ rm -rf reports/
 
 ---
 
-## 📈 Métriques Recommandées
-
-- **Secrets exposés** : 0 (objectif strict)
-- **CVE critiques** : 0
-- **CVE hautes** : < 5
-- **Score SSL** : A+ (TestSSL)
-- **Score headers** : A (SecurityHeaders)
-- **Temps de correction CRITICAL** : < 24h
-
----
-
-## 📚 Ressources
-
-- 🌐 [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- 🔍 [Semgrep Rules](https://semgrep.dev/explore)
-- 🛡️ [OWASP ZAP Docs](https://www.zaproxy.org/docs/)
-- 📦 [Snyk](https://snyk.io)
-- 🐳 [Trivy Docs](https://aquasecurity.github.io/trivy/)
-
----
-
 ## 📁 Structure des Rapports
 
 ```
@@ -706,29 +696,14 @@ reports/
 ├── semgrep/              # Analyse code source
 ├── phpstan/              # Analyse statique PHP
 ├── php-cs-fixer/         # Standards de code PHP
-├── dependency-check/     # Vulnérabilités dépendances
+├── dependency-check/     # Vulnérabilités des bibliothèques
 ├── gitleaks/             # Secrets détectés ⚠️
-├── trivy/                # Vulnérabilités conteneurs
+├── trivy/                # Vulnérabilités dans les conteneurs
 ├── zap/                  # Scan web dynamique
-├── nuclei/               # CVE et exposures
+├── nuclei/               # Failles connues et services exposés
 ├── testssl/              # Configuration SSL/TLS
 └── newman/               # Tests API
 ```
-
----
-
-## 🎯 Checklist Avant Production
-
-- [ ] `./security-scan.sh full` exécuté
-- [ ] Aucun secret détecté (GitLeaks)
-- [ ] Aucune CVE critique (Dependency Check)
-- [ ] Score SSL ≥ A (TestSSL)
-- [ ] En-têtes sécurité présents (SecurityHeaders)
-- [ ] Tests API passent (Newman)
-- [ ] Scan ZAP sans alerte HIGH
-- [ ] Documentation des suppressions à jour
-
----
 
 ## 📚 Ressources
 
@@ -744,17 +719,3 @@ reports/
 **Version** : 2.0.0  
 **Dernière mise à jour** : 31 octobre 2025  
 **Guide unifié** : Configuration + Réutilisation + DAST OVH
-
----
-
-**Commencer maintenant :**
-```bash
-# 1. Configurer
-cp .env.example .env && nano .env
-
-# 2. Scanner
-./security-scan.sh quick
-
-# 3. Résultats
-./view-results.sh
-```
