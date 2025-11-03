@@ -107,14 +107,21 @@ docker compose run --rm trivy                 # Vulnérabilités conteneurs
 
 **OWASP Dependency Check**
 - Détecte : Vulnérabilités connues dans composer.lock et toutes les dépendances du projet
-- Base : National Vulnerability Database (NVD) - base de données officielle des failles de sécurité
+- Base : National Vulnerability Database (NVD) - base de données officielle des failles de sécurité + OSS Index (Sonatype)
 - Rapport : `reports/dependency-check/dependency-check-report.html`
 - ⚙️ Config faux positifs : `elearning/dependency-check-suppressions.xml`
+- 🔐 OSS Index : Nécessite `OSS_INDEX_USERNAME` et `OSS_INDEX_API_KEY` (authentification obligatoire)
+- 🚀 Performance : Ajoutez `NVD_API_KEY` dans `.env` pour accélérer les scans (sans clé : plusieurs minutes, avec clé : quelques secondes)
 
 **Snyk** (optionnel, nécessite token)
 - Détecte : Vulnérabilités avec base plus récente
 - Obtenir token : https://snyk.io
 - Config : `SNYK_TOKEN` dans `.env`
+
+**NVD API Key** (fortement recommandé pour Dependency Check)
+- Accélère considérablement les mises à jour de la base de vulnérabilités
+- Obtenir clé : https://nvd.nist.gov/developers/request-an-api-key
+- Config : `NVD_API_KEY` dans `.env`
 
 **Local PHP Security Checker**
 - Détecte : Vulnérabilités connues dans composer.lock
@@ -304,8 +311,9 @@ DOCKERFILE_PATH=docker/app
 TARGET_URL=https://staging.myapp.aws.com
 DOCKER_IMAGE=123456789.dkr.ecr.eu-west-1.amazonaws.com/laravel-app:staging
 SNYK_TOKEN=abc123...
-OSSINDEX_USER=dev@mycompany.com
-OSSINDEX_TOKEN=xyz789...
+OSS_INDEX_USERNAME=dev@mycompany.com
+OSS_INDEX_API_KEY=xyz789...
+NVD_API_KEY=nvd_abc123...
 ```
 
 #### Exemple 2 : API Symfony sur OVH
@@ -316,8 +324,9 @@ DOCKERFILE_PATH=docker/php-fpm
 TARGET_URL=https://api.example.ovh
 DOCKER_IMAGE=docker.example.fr/api:latest
 SNYK_TOKEN=def456...
-OSSINDEX_USER=security@example.com
-OSSINDEX_TOKEN=tuv012...
+OSS_INDEX_USERNAME=security@example.com
+OSS_INDEX_API_KEY=tuv012...
+NVD_API_KEY=nvd_def456...
 ```
 
 #### Exemple 3 : Projet WordPress local
@@ -357,7 +366,8 @@ snyk:
 - [ ] Définir `TARGET_URL` (URL de l'application)
 - [ ] Définir `DOCKER_IMAGE` (image à scanner)
 - [ ] Configurer `SNYK_TOKEN` (optionnel)
-- [ ] Configurer `OSSINDEX_USER` et `OSSINDEX_TOKEN` (recommandé)
+- [ ] Configurer `OSS_INDEX_USERNAME` et `OSS_INDEX_API_KEY` (recommandé)
+- [ ] Configurer `NVD_API_KEY` (fortement recommandé pour accélérer Dependency Check)
 - [ ] Tester avec `./security-scan.sh quick`
 - [ ] Vérifier les rapports dans `./reports/`
 - [ ] Pour DAST : whitelister votre IP chez l'hébergeur
@@ -713,6 +723,7 @@ reports/
 - 📦 [Snyk](https://snyk.io)
 - 🐳 [Trivy Docs](https://aquasecurity.github.io/trivy/)
 - 🔐 [OSS Index](https://ossindex.sonatype.org/)
+- 🗄️ [NVD (National Vulnerability Database)](https://nvd.nist.gov/)
 
 ---
 

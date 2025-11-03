@@ -45,8 +45,9 @@ DOCKERFILE_PATH=docker/php                       # Chemin Dockerfile (relatif au
 TARGET_URL=https://dev.cebios-lms.fr             # URL à scanner
 DOCKER_IMAGE=docker.cebios-lms.fr/app-lms:latest # Image Docker
 SNYK_TOKEN=...                                    # Token Snyk (optionnel)
-OSSINDEX_USER=...                                 # OSS Index (requis)
-OSSINDEX_TOKEN=...                                # OSS Index (requis)
+OSS_INDEX_USERNAME=...                                 # OSS Index (requis)
+OSS_INDEX_API_KEY=...                                # OSS Index (requis)
+NVD_API_KEY=...                                   # NVD API Key (fortement recommandé)
 ```
 
 ## 🔄 Réutilisation

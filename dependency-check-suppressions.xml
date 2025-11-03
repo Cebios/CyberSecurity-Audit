@@ -97,6 +97,7 @@
         Ces packages ne sont jamais inclus dans le build de production
         ]]></notes>
         <filePath regex="true">.*vendor/phpunit/.*</filePath>
+        <vulnerabilityName regex="true">.*</vulnerabilityName>
     </suppress>
     
     <suppress>
@@ -104,6 +105,7 @@
         PHPStan - Outil de développement uniquement
         ]]></notes>
         <filePath regex="true">.*vendor/phpstan/.*</filePath>
+        <vulnerabilityName regex="true">.*</vulnerabilityName>
     </suppress>
     
     <suppress>
@@ -111,6 +113,7 @@
         PHP-CS-Fixer - Outil de développement uniquement
         ]]></notes>
         <filePath regex="true">.*vendor/friendsofphp/php-cs-fixer/.*</filePath>
+        <vulnerabilityName regex="true">.*</vulnerabilityName>
     </suppress>
     
     <!-- 

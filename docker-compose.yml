@@ -56,8 +56,9 @@ services:
     image: owasp/dependency-check:latest
     container_name: dependency_check
     environment:
-      - OSSINDEX_USER=${OSSINDEX_USER:-}
-      - OSSINDEX_TOKEN=${OSSINDEX_TOKEN:-}
+      - NVD_API_KEY=${NVD_API_KEY:-}
+      - OSS_INDEX_USERNAME=${OSSINDEX_USER:-}
+      - OSS_INDEX_API_KEY=${OSSINDEX_PASSWORD:-}
     volumes:
       - ${PROJECT_DIR}:/src
       - ./reports/dependency-check:/report
@@ -144,7 +145,7 @@ services:
     container_name: hadolint_scan
     command: hadolint --format json /dockerfile/Dockerfile > /reports/hadolint-report.json || true
     volumes:
-      - ${PROJECT_DIR}/${DOCKERFILE}:/dockerfile
+      - ${PROJECT_DIR}/${DOCKERFILE}:/dockerfile/Dockerfile
       - ./reports/hadolint:/reports
     restart: "no"
 
@@ -244,6 +245,7 @@ services:
     image: drwetter/testssl.sh:latest
     container_name: testssl_scan
     command: >
+      --append
       --jsonfile /reports/testssl-report.json
       --htmlfile /reports/testssl-report.html
       ${TARGET_URL}

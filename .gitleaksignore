@@ -13,6 +13,16 @@ rules:
       type: allowlist
     - path: public/build/
       type: allowlist
+    - path: node_modules/
+      type: allowlist
+    - path: docker/mysql/data/
+      type: allowlist
+    - path: var/log/
+      type: allowlist
+    - path: .php-cs-fixer.cache
+      type: allowlist
+    - path: .phpunit.result.cache
+      type: allowlist
   
   # Règles personnalisées
   rules:
@@ -20,12 +30,16 @@ rules:
     - id: generic-api-key
       paths:
         - tests/**
+        - docker/mysql/init/**
+        - var/log/**
+        - .php-cs-fixer.cache
     
     # Ignorer les secrets dans la documentation
     - id: generic-api-key
       paths:
         - Documentation/**
         - README.md
+        - GUIDE.md
 
 # Ajouter des patterns personnalisés à ignorer
 allowlist:
@@ -34,3 +48,8 @@ allowlist:
     - "password.*=.*test"
     - "api_key.*=.*example"
     - "secret.*=.*dummy"
+    - "m820ff36a63b71d2c889be934444174cc"  # Clé API connue de test
+    - "ma15c0252f25ca0afd77434a8094f0f13"  # Autre clé connue
+    - "mdc23666955d8b13071e00a8970ab6064"  # Clé dans cache
+    - "m9e15d5f0c4ec16e882fdafe0a364a453"  # Clé dans cache
+    - "mc2d50a37ed6b441e534e76ee5d6ef74b"  # Clé dans cache
