@@ -111,9 +111,10 @@ services:
     container_name: trivy_scan
     command: >
       image 
-      --format json 
-      --output /reports/trivy-report.json
-      --severity HIGH,CRITICAL
+      --format table 
+      --dependency-tree
+      --output /reports/trivy-report.txt
+      --severity UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
       ${DOCKER_IMAGE}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
@@ -128,15 +129,20 @@ services:
   grype:
     image: anchore/grype:latest
     container_name: grype_scan
+    user: "0"  # Run as root to access docker socket
+    privileged: true
     command: >
       ${DOCKER_IMAGE}
-      -o json 
-      --file /reports/grype-report.json
+      -o table 
+      --file /reports/grype-report.txt
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+      - DOCKER_CONFIG=/root/.docker
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - ./reports/grype:/reports
       - grype-cache:/root/.cache/
-      - ${HOME}/.docker/config.json:/root/.docker/config.json:ro
+      - ${HOME}/.docker:/root/.docker:ro
     restart: "no"
     env_file:
       - .env
