@@ -490,6 +490,19 @@ sudo fail2ban-client status nginx-limit-req
 4. **🔐 SSL/TLS** → Améliorer configuration du chiffrement
 5. **📋 En-têtes HTTP** → Ajouter les en-têtes de sécurité manquants
 
+### 🔍 Scanners de Conteneurs : Trivy vs Grype
+
+**Pour les conteneurs Alpine Linux** (comme votre image PHP), **faites confiance à Trivy** qui est spécialisé dans les distributions Linux spécifiques :
+
+- **✅ Trivy** : Utilise directement la base de données de sécurité Alpine → **résultats précis**
+- **⚠️ Grype** : Utilise la NVD générale → **beaucoup de faux positifs** pour Alpine
+
+**Exemple concret :**
+- Grype détecte ~15 vulnérabilités dans ImageMagick, Calendar, Perl...
+- Trivy n'en détecte **aucune** pour Alpine 3.22
+
+**Recommandation :** Utilisez Trivy comme référence pour Alpine. Grype peut détecter des vulnérabilités supplémentaires mais nécessite un filtrage manuel des faux positifs.
+
 ### Consulter les rapports
 
 ```bash

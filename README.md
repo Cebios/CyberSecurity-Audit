@@ -39,6 +39,10 @@ nano .env  # Définir PROJECT_DIR, DOCKERFILE_PATH, TARGET_URL, DOCKER_IMAGE
 **Réseau** : Nmap  
 **API** : Newman (Postman)
 
+### 🔍 Note sur les Scanners de Conteneurs
+
+Pour un container sous **Alpine Linux**, **privilégiez Trivy** qui utilise la base de sécurité Alpine spécifique. Grype détecte plus de vulnérabilités générales mais génère des faux positifs pour Alpine.
+
 ---
 
 **Documentation complète** : [GUIDE.md](GUIDE.md)
