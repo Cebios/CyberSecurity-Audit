@@ -72,15 +72,47 @@ Le script affiche un **menu interactif** avec les options suivantes :
 
 ### Outils Individuels
 
+#### 🔧 Exécution Manuelle avec Génération de Rapports
+
+**Important :** Pour générer automatiquement les rapports dans `reports/`, utilisez ces commandes avec redirection :
+
 ```bash
-docker compose run --rm gitleaks              # Détection de secrets
-docker compose run --rm dependency_check      # Vulnérabilités dépendances
-docker compose run --rm semgrep               # Analyse SAST
-docker compose run --rm phpstan               # Analyse statique PHP
-docker compose run --rm php_cs_fixer          # Standards de code PHP
-docker compose run --rm zap_baseline          # Scan web dynamique
-docker compose run --rm trivy                 # Vulnérabilités conteneurs
+# 🧠 SAST - Analyse du Code Source
+docker compose run --rm semgrep > reports/semgrep/semgrep-report.json 2>&1
+docker compose run --rm phpstan > reports/phpstan/phpstan-report.json 2>&1
+docker compose run --rm php_cs_fixer > reports/php-cs-fixer/php-cs-fixer-report.json 2>&1
+
+# 📦 SCA - Analyse des Dépendances
+docker compose run --rm dependency_check > reports/dependency-check/dependency-check-report.html 2>&1
+docker compose run --rm snyk > reports/snyk/snyk-report.json 2>&1
+docker compose run --rm local_php_security > reports/security-checker/security-checker-report.json 2>&1
+
+# 🐳 Sécurité des Conteneurs
+docker compose run --rm trivy > reports/trivy/trivy-report.txt 2>&1
+docker compose run --rm grype > reports/grype/grype-report.txt 2>&1
+docker compose run --rm hadolint > reports/hadolint/hadolint-report.txt 2>&1
+
+# 🔑 Détection de Secrets
+docker compose run --rm gitleaks > reports/gitleaks/gitleaks-report.json 2>&1
+docker compose run --rm trufflehog > reports/trufflehog/trufflehog-report.json 2>&1
+
+# 🌐 DAST - Tests Dynamiques Web
+docker compose run --rm zap_baseline > reports/zap/zap-baseline-report.html 2>&1
+docker compose run --rm zap_full > reports/zap/zap-full-report.html 2>&1
+
+# 🔐 TLS/SSL & En-têtes
+docker compose run --rm testssl > reports/testssl/testssl-report.html 2>&1
+docker compose run --rm securityheaders > reports/securityheaders/securityheaders-report.json 2>&1
+
+# 🌍 Scan Réseau
+docker compose run --rm nmap > reports/nmap/nmap-report.txt 2>&1
+docker compose run --rm nuclei > reports/nuclei/nuclei-report.txt 2>&1
+
+# 🧾 Tests API
+docker compose run --rm newman > reports/newman/newman-report.json 2>&1
 ```
+
+**Note :** Le script `security-scan.sh` exécute automatiquement toutes ces commandes avec les bonnes redirections. Les commandes ci-dessus sont pour l'exécution manuelle individuelle.
 
 ---
 

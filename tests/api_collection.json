@@ -12,6 +12,7 @@
       "item": [
         {
           "name": "Login - Valid Credentials",
+          "disabled": true,
           "event": [
             {
               "listen": "test",
@@ -42,9 +43,9 @@
               "raw": "{\n  \"username\": \"test@example.com\",\n  \"password\": \"ValidPassword123!\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/login",
+              "raw": "{{base_url}}{{login_path}}",
               "host": ["{{base_url}}"],
-              "path": ["login"]
+              "path": ["{{login_path}}"]
             }
           }
         },
@@ -82,9 +83,9 @@
               "raw": "{\n  \"username\": \"admin' OR '1'='1\",\n  \"password\": \"' OR '1'='1\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/login",
+              "raw": "{{base_url}}{{login_path}}",
               "host": ["{{base_url}}"],
-              "path": ["login"]
+              "path": ["{{login_path}}"]
             }
           }
         },
@@ -121,9 +122,9 @@
               "raw": "{\n  \"username\": \"<script>alert('XSS')</script>\",\n  \"password\": \"<img src=x onerror=alert('XSS')>\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/login",
+              "raw": "{{base_url}}{{login_path}}",
               "host": ["{{base_url}}"],
-              "path": ["login"]
+              "path": ["{{login_path}}"]
             }
           }
         }
@@ -150,9 +151,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/admin/users",
+              "raw": "{{base_url}}/administration/admin",
               "host": ["{{base_url}}"],
-              "path": ["admin", "users"]
+              "path": ["administration", "admin"]
             }
           }
         },
@@ -179,9 +180,9 @@
               }
             ],
             "url": {
-              "raw": "{{base_url}}/admin/users",
+              "raw": "{{base_url}}/administration/admin",
               "host": ["{{base_url}}"],
-              "path": ["admin", "users"]
+              "path": ["administration", "admin"]
             }
           }
         }
@@ -224,9 +225,9 @@
               "raw": "{\n  \"invalid_field\": \"value\",\n  \"malformed\": true\n}"
             },
             "url": {
-              "raw": "{{base_url}}/api/users",
+              "raw": "{{base_url}}/old/login",
               "host": ["{{base_url}}"],
-              "path": ["api", "users"]
+              "path": ["old", "login"]
             }
           }
         },
@@ -254,15 +255,9 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/files?path=../../../../etc/passwd",
+              "raw": "{{base_url}}/administration/fiche-societes-users/../../../..%2Fetc%2Fpasswd",
               "host": ["{{base_url}}"],
-              "path": ["files"],
-              "query": [
-                {
-                  "key": "path",
-                  "value": "../../../../etc/passwd"
-                }
-              ]
+              "path": ["administration", "fiche-societes-users", "../../../..%2Fetc%2Fpasswd"]
             }
           }
         }
@@ -325,9 +320,14 @@
               "script": {
                 "exec": [
                   "// Faire plusieurs requêtes rapidement",
+                  "const baseUrl = pm.variables.get('base_url');",
+                  "const loginPath = pm.variables.get('login_path') || '/login';",
+                  "console.log('Base URL:', baseUrl);",
+                  "console.log('Login Path:', loginPath);",
+                  "",
                   "for (let i = 0; i < 10; i++) {",
                   "    pm.sendRequest({",
-                  "        url: pm.variables.get('base_url') + '/login',",
+                  "        url: baseUrl + loginPath,",
                   "        method: 'POST',",
                   "        header: {",
                   "            'Content-Type': 'application/json'",
@@ -340,7 +340,7 @@
                   "            })",
                   "        }",
                   "    }, function(err, res) {",
-                  "        console.log('Request ' + i + ': ' + res.code);",
+                  "        console.log('Request ' + i + ': ' + (res ? res.code : 'error'));",
                   "    });",
                   "}"
                 ]
@@ -374,9 +374,9 @@
               "raw": "{\n  \"username\": \"test\",\n  \"password\": \"test\"\n}"
             },
             "url": {
-              "raw": "{{base_url}}/login",
+              "raw": "{{base_url}}{{login_path}}",
               "host": ["{{base_url}}"],
-              "path": ["login"]
+              "path": ["{{login_path}}"]
             }
           }
         }
@@ -386,7 +386,12 @@
   "variable": [
     {
       "key": "base_url",
-      "value": "https://dev.cebios-lms.fr",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "login_path",
+      "value": "",
       "type": "string"
     },
     {

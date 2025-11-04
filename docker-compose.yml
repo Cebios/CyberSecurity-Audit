@@ -151,10 +151,11 @@ services:
   hadolint:
     image: hadolint/hadolint:latest
     container_name: hadolint_scan
-    command: hadolint --format json /dockerfile/Dockerfile > /reports/hadolint-report.json || true
+    command: hadolint --config /root/.hadolint.yaml --format tty /dockerfile/Dockerfile
     volumes:
       - ${PROJECT_DIR}/${DOCKERFILE}:/dockerfile/Dockerfile
       - ./reports/hadolint:/reports
+      - ./.hadolint.yaml:/root/.hadolint.yaml:ro
     restart: "no"
 
   ########################################################################
@@ -295,16 +296,21 @@ services:
   
   # Newman - Tests Postman
   newman:
-    image: postman/newman:latest
+    build:
+      context: .
+      dockerfile: docker/newman.Dockerfile
     container_name: newman_api_scan
     volumes:
       - ./tests:/etc/newman
       - ./reports/newman:/reports
     command: >
-      run /etc/newman/api_collection.json 
-      --reporters cli,json,html
+      run /etc/newman/api_collection.json
+      --env-var "base_url=${TARGET_URL:-https://dev.cebios-lms.fr}"
+      --env-var "login_path=${LOGIN_PATH:-/login}"
+      --reporters cli,htmlextra,json
       --reporter-json-export /reports/newman-report.json
-      --reporter-html-export /reports/newman-report.html
+      --reporter-htmlextra-export /reports/newman-report.html
+      --reporter-htmlextra-title "Rapport Tests API - E-Learning"
     restart: "no"
 
   ########################################################################
