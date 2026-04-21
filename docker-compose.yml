@@ -73,6 +73,7 @@ services:
       --out /report
       --suppression /suppressions/dependency-check-suppressions.xml
       --nvdApiKey ${NVD_API_KEY:-}
+      --enableExperimental
     restart: "no"
 
   # Snyk - Analyse des vulnérabilités (alternative/complément)
