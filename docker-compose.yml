@@ -56,6 +56,7 @@ services:
   # OWASP Dependency Check
   dependency_check:
     image: owasp/dependency-check:latest
+    platform: linux/amd64
     container_name: dependency_check
     environment:
       - NVD_API_KEY=${NVD_API_KEY:-}
@@ -70,21 +71,26 @@ services:
       --scan /src 
       --format ALL 
       --out /report
-      --enableExperimental
       --suppression /suppressions/dependency-check-suppressions.xml
+      --nvdApiKey ${NVD_API_KEY:-}
     restart: "no"
 
   # Snyk - Analyse des vulnérabilités (alternative/complément)
   snyk:
     image: snyk/snyk:php
+    platform: linux/amd64
     container_name: snyk_scan
-    entrypoint: sh
+    entrypoint:
+      - sh
     environment:
       - SNYK_TOKEN=${SNYK_TOKEN:-}
     volumes:
       - ${PROJECT_DIR}:/project
       - ./reports/snyk:/reports
-    command: -c "snyk test --json > /reports/snyk-report.json 2>&1 || true"
+    command:
+      - -c
+      - |
+        snyk test --all-projects > /reports/snyk-report.txt 2>&1 || true
     working_dir: /project
     restart: "no"
 
@@ -93,8 +99,7 @@ services:
     image: composer:latest
     container_name: local_php_security
     command: >
-      sh -c "composer global require enlightn/security-checker && 
-      /tmp/vendor/bin/security-checker security:check /app/composer.lock --format=json > /reports/security-checker.json || true"
+      sh -c "composer audit --format=json --no-interaction > /reports/composer-audit.json || true"
     volumes:
       - ${PROJECT_DIR}:/app
       - ./reports/security-checker:/reports
